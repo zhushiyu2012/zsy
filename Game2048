@@ -1,0 +1,420 @@
+import java.io.*;
+import java.util.*;
+
+public class Game2048 {
+
+	public static void main(String[] args) throws IOException {
+		// TODO Auto-generated method stub
+		Scanner in = new Scanner(System.in);
+		int size = 4;
+		int act = 0;
+		String mode = "";
+		if (args.length > 0) {
+			mode = args[0];
+		}
+		System.out.println("================");
+		System.out.println("Welcome to 2048!");
+		System.out.println("================");
+		System.out.println();
+		System.out
+				.println("Tip1:\tIf you want to play the endless mode (the game won't finish even if you get 2048), ");
+		System.out.println("\tyou can set \"endless\" for the first runtime argument (args[0]). Have fun!");
+		System.out.println();
+		System.out
+				.println("Tip2:\tEnter 9 to use the function of \"regret\", it will lead you to the table last time.");
+		System.out.println("\tHowever, you can only use function of \"regret\" once in each game. Good luck!");
+		System.out.println();
+		System.out.println("Enter an integer (>=3) to set the size of the table. Otherwise the size will be set as 4.");
+		System.out.print("The size of your table is:");
+		size = in.hasNextInt() ? in.nextInt() : 4;
+		in.nextLine();
+		System.out.println();
+		System.out.println("===========");
+		System.out.println("Game start!");
+		System.out.println("===========");
+		Table t = new Table(size, mode);
+		t.printTable();
+		while (t.gameOk() && !t.isWin()) {
+			act = in.hasNextInt() ? in.nextInt() : -1;
+			in.nextLine();
+			if (t.moveOk(act)) {
+				switch (act) {
+				case 1:
+					t.act1();
+					break;
+				case 2:
+					t.act2();
+					break;
+				case 3:
+					t.act3();
+					break;
+				case 4:
+					t.act4();
+					break;
+				case 9:
+					t.regret();
+					break;
+				case 0:
+					t.printScore();
+					System.out.println("=============");
+					System.out.println("Game Restart!");
+					System.out.println("=============");
+					System.out.println();
+					main(args);
+					break;
+				}
+			} else {
+				System.out.println("Invalid move, please retry!");
+			}
+			t.printTable();
+		}
+		if (!t.gameOk()) {
+			System.out.println();
+			System.out.println("Game Over!");
+			t.printScore();
+		} else if (t.isWin()) {
+			System.out.println();
+			System.out.println("Congratulations! You have got 2048!");
+			System.out.println("It took you " + t.getCount() + " steps to get 2048.");
+			System.out.println();
+		}
+		System.out.println("==================================");
+		System.out.println("Enter any key to restart the game.");
+		System.out.println("==================================");
+		System.out.println();
+		System.in.read();
+		main(args);
+		in.close();
+	}
+}
+
+class Table {
+	private int[][] table;
+	private int[][] last;
+	private int count;
+	private int limit;
+	private boolean ableToUseRegret;
+
+	Table(int n, String mode) {
+		if (n >= 3) {
+			this.table = new int[n][n];
+			this.last = new int[n][n];
+		} else {
+			this.table = new int[4][4];
+			this.last = new int[4][4];
+		}
+		this.count = 0;
+		this.addRandom();
+		this.addRandom();
+		this.record();
+		this.ableToUseRegret = true;
+		this.limit = mode.equals("endless") ? 9999999 : 2048;
+	}
+
+	public void addRandom() {
+		while (true) {
+			int a = (int) (Math.random() * table.length - 0.5);
+			int b = (int) (Math.random() * table[0].length - 0.5);
+			if (table[a][b] == 0) {
+				table[a][b] = Math.random() >= 0.5 ? 4 : 2;
+				break;
+			}
+		}
+	}
+
+	public boolean isWin() {
+		for (int i[] : table) {
+			for (int j : i)
+				if (j >= limit) {
+					return true;
+				}
+		}
+		return false;
+	}
+
+	public boolean moveOk(int a) {
+		switch (a) {
+		case 1:
+			for (int i = 0; i < table.length; i++) {
+				for (int j = 0; j < table[i].length - 1; j++) {
+					if (((table[i][j] == table[i][j + 1]) && (table[i][j] != 0))
+							|| ((table[i][j] == 0) && (table[i][j + 1] != 0))) {
+						return true;
+					}
+				}
+			}
+			break;
+		case 2:
+			for (int i = 0; i < table.length; i++) {
+				for (int j = table[i].length - 1; j > 0; j -= 1) {
+					if (((table[i][j] == table[i][j - 1]) && (table[i][j] != 0))
+							|| ((table[i][j] == 0) && (table[i][j - 1] != 0))) {
+						return true;
+					}
+				}
+			}
+			break;
+		case 3:
+			for (int i = 0; i < table[0].length; i++) {
+				for (int j = table.length - 1; j > 0; j -= 1) {
+					if (((table[j][i] == table[j - 1][i]) && (table[j][i] != 0))
+							|| ((table[j][i] == 0) && (table[j - 1][i] != 0))) {
+						return true;
+					}
+				}
+			}
+			break;
+		case 4:
+			for (int i = 0; i < table[0].length; i++) {
+				for (int j = 0; j < table.length - 1; j++) {
+					if (((table[j][i] == table[j + 1][i]) && (table[j][i] != 0))
+							|| ((table[j][i] == 0) && (table[j + 1][i] != 0))) {
+						return true;
+					}
+				}
+			}
+			break;
+		case 9:
+			if (this.count != 0 && this.ableToUseRegret) {
+				return true;
+			} else if (!this.ableToUseRegret) {
+				System.out.println("Sorry, but you have used \"regret\" in this game.");
+			} else {
+				System.out.println("Sorry, but you can't use \"regret\" in the first move.");
+			}
+			return false;
+		case 0:
+			return true;
+		}
+		return false;
+	}
+
+	public boolean gameOk() {
+		for (int k = 1; k <= 4; k++) {
+			if (moveOk(k)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public void printTable() {
+		System.out.println();
+		System.out.println("Move " + this.count);
+		System.out.println();
+		for (int i = 0; i < table.length; i++) {
+			for (int j = 0; j < table[i].length; j++) {
+				System.out.print(table[i][j] + "\t");
+			}
+			System.out.println();
+		}
+		System.out.println();
+		System.out.println("===================================================");
+		System.out.println("1 = ←; 2 = →; 3 = ↓; 4 = ↑; 9 = Regret; 0 = Restart");
+		System.out.println("~~~~~~Please enter the direction of movement!~~~~~~");
+		System.out.println("===================================================");
+	}
+
+	public void printScore() {
+		int score = 0;
+		for (int m[] : table) {
+			for (int n : m) {
+				score += n;
+			}
+		}
+		System.out.println("");
+		System.out.println("Your score is " + score + ".");
+		System.out.println("");
+	}
+
+	public void move1() {
+		int c = 0;
+		for (int i = 0; i < table.length; i++) {
+			for (int j = 1; j < table[i].length; j++) {
+				c = 0;
+				for (int k = j - 1; k >= 0; k -= 1) {
+					if (table[i][k] == 0 && table[i][j] != 0) {
+						c++;
+					} else {
+						break;
+					}
+				}
+				if (c > 0) {
+					table[i][j - c] = table[i][j];
+					table[i][j] = 0;
+				}
+			}
+		}
+	}
+
+	public void move2() {
+		int c = 0;
+		for (int i = 0; i < table.length; i++) {
+			for (int j = table[i].length - 1; j >= 0; j--) {
+				c = 0;
+				for (int k = j + 1; k < table[i].length; k++) {
+					if (table[i][k] == 0 && table[i][j] != 0) {
+						c++;
+					} else {
+						break;
+					}
+				}
+				if (c > 0) {
+					table[i][j + c] = table[i][j];
+					table[i][j] = 0;
+				}
+			}
+		}
+	}
+
+	public void move3() {
+		int c = 0;
+		for (int i = 0; i < table.length; i++) {
+			for (int j = table[i].length - 2; j >= 0; j--) {
+				c = 0;
+				for (int k = j + 1; k < table[i].length; k++) {
+					if (table[k][i] == 0 && table[j][i] != 0) {
+						c++;
+					} else {
+						break;
+					}
+				}
+				if (c > 0) {
+					table[j + c][i] = table[j][i];
+					table[j][i] = 0;
+				}
+			}
+		}
+	}
+
+	public void move4() {
+		int c = 0;
+		for (int i = 0; i < table.length; i++) {
+			for (int j = 1; j < table.length; j++) {
+				c = 0;
+				for (int k = j - 1; k >= 0; k--) {
+					if (table[k][i] == 0 && table[j][i] != 0) {
+						c++;
+					} else {
+						break;
+					}
+				}
+				if (c > 0) {
+					table[j - c][i] = table[j][i];
+					table[j][i] = 0;
+				}
+			}
+		}
+	}
+
+	public void calc1() {
+		boolean flag[][] = new boolean[table.length][table[0].length];
+		for (int i = 0; i < table.length; i++) {
+			for (int j = 1; j < table[i].length; j++) {
+				if (table[i][j] == table[i][j - 1] && table[i][j] != 0 && !flag[i][j]) {
+					table[i][j - 1] *= 2;
+					table[i][j] = 0;
+					flag[i][j - 1] = true;
+				}
+			}
+		}
+	}
+
+	public void calc2() {
+		boolean flag[][] = new boolean[table.length][table[0].length];
+		for (int i = 0; i < table.length; i++) {
+			for (int j = table[i].length - 2; j >= 0; j--) {
+				if (table[i][j] == table[i][j + 1] && table[i][j] != 0 && !flag[i][j]) {
+					table[i][j + 1] *= 2;
+					table[i][j] = 0;
+					flag[i][j + 1] = true;
+				}
+			}
+		}
+	}
+
+	public void calc3() {
+		boolean flag[][] = new boolean[table.length][table[0].length];
+		for (int i = 0; i < table[0].length; i++) {
+			for (int j = table.length - 2; j >= 0; j--) {
+				if (table[j][i] == table[j + 1][i] && table[j][i] != 0 && !flag[j][i]) {
+					table[j + 1][i] *= 2;
+					table[j][i] = 0;
+					flag[j + 1][i] = true;
+				}
+			}
+		}
+	}
+
+	public void calc4() {
+		boolean flag[][] = new boolean[table.length][table[0].length];
+		for (int i = 0; i < table[0].length; i++) {
+			for (int j = 1; j < table.length; j++) {
+				if (table[j][i] == table[j - 1][i] && table[j][i] != 0 && !flag[j][i]) {
+					table[j - 1][i] *= 2;
+					table[j][i] = 0;
+					flag[j - 1][i] = true;
+				}
+			}
+		}
+	}
+
+	public void record() {
+		for (int i = 0; i < table.length; i++) {
+			for (int j = 0; j < table[i].length; j++) {
+				last[i][j] = table[i][j];
+			}
+		}
+	}
+
+	public void act1() {
+		this.record();
+		this.count++;
+		this.move1();
+		this.calc1();
+		this.move1();
+		this.addRandom();
+	}
+
+	public void act2() {
+		this.record();
+		this.count++;
+		this.move2();
+		this.calc2();
+		this.move2();
+		this.addRandom();
+	}
+
+	public void act3() {
+		this.record();
+		this.count++;
+		this.move3();
+		this.calc3();
+		this.move3();
+		this.addRandom();
+	}
+
+	public void act4() {
+		this.record();
+		this.count++;
+		this.move4();
+		this.calc4();
+		this.move4();
+		this.addRandom();
+	}
+
+	public void regret() {
+		count--;
+		for (int i = 0; i < table.length; i++) {
+			for (int j = 0; j < table[i].length; j++) {
+				table[i][j] = last[i][j];
+			}
+		}
+		ableToUseRegret = false;
+		System.out.println("Regret succeed!");
+	}
+
+	public int getCount() {
+		return this.count;
+	}
+}
